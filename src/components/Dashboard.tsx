@@ -64,6 +64,21 @@ export default function Dashboard() {
     data: new Date().toISOString().split('T')[0]
   })
 
+  const [giForm, setGiForm] = useState({
+    client_id: '',
+    importo: '',
+    note: '',
+    data: new Date().toISOString().split('T')[0]
+  })
+
+  const [vsdForm, setVsdForm] = useState({
+    client_id: '',
+    importo: '',
+    importo_personale: false,
+    note: '',
+    data: new Date().toISOString().split('T')[0]
+  })
+
   useEffect(() => {
     if (user) {
       loadData()
@@ -174,15 +189,21 @@ export default function Dashboard() {
         .from('gi_transactions')
         .insert([{
           user_id: user?.id,
-          client_id: transactionForm.client_id,
-          importo: parseFloat(transactionForm.importo),
-          note: transactionForm.note,
-          data: transactionForm.data
+          client_id: giForm.client_id,
+          importo: parseFloat(giForm.importo),
+          note: giForm.note,
+          data: giForm.data
         }])
 
       if (error) throw error
 
       setShowGIModal(false)
+      setGiForm({
+        client_id: '',
+        importo: '',
+        note: '',
+        data: new Date().toISOString().split('T')[0]
+      })
       resetTransactionForm()
       loadData()
     } catch (error) {
@@ -197,17 +218,23 @@ export default function Dashboard() {
         .from('vsd_transactions')
         .insert([{
           user_id: user?.id,
-          client_id: transactionForm.client_id,
-          importo_totale: parseFloat(transactionForm.importo),
-          importo_personale: parseFloat(transactionForm.importo_personale),
-          note: transactionForm.note,
-          data: transactionForm.data
+          client_id: vsdForm.client_id,
+          importo: parseFloat(vsdForm.importo),
+          importo_personale: vsdForm.importo_personale ? parseFloat(vsdForm.importo) : 0,
+          note: vsdForm.note,
+          data: vsdForm.data
         }])
 
       if (error) throw error
 
       setShowVSDModal(false)
-      resetTransactionForm()
+      setVsdForm({
+        client_id: '',
+        importo: '',
+        importo_personale: false,
+        note: '',
+        data: new Date().toISOString().split('T')[0]
+      })
       loadData()
     } catch (error) {
       console.error('Error adding VSD transaction:', error)
@@ -762,6 +789,163 @@ export default function Dashboard() {
                 <button
                   type="submit"
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Salva
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* G.I. Modal */}
+      {showGIModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Nuovo Incasso G.I.</h3>
+            <form onSubmit={addGITransaction} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Cliente *</label>
+                <select
+                  value={giForm.client_id}
+                  onChange={(e) => setGiForm({...giForm, client_id: e.target.value})}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="">Seleziona cliente...</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.nome_azienda}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Importo Incasso *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={giForm.importo}
+                  onChange={(e) => setGiForm({...giForm, importo: e.target.value})}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Note Incasso</label>
+                <textarea
+                  value={giForm.note}
+                  onChange={(e) => setGiForm({...giForm, note: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Data *</label>
+                <input
+                  type="date"
+                  value={giForm.data}
+                  onChange={(e) => setGiForm({...giForm, data: e.target.value})}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowGIModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annulla
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Salva
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* VSD Modal */}
+      {showVSDModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Nuovo Servizio VSD</h3>
+            <form onSubmit={addVSDTransaction} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Cliente *</label>
+                <select
+                  value={vsdForm.client_id}
+                  onChange={(e) => setVsdForm({...vsdForm, client_id: e.target.value})}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="">Seleziona cliente...</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.nome_azienda}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Importo Servizio *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={vsdForm.importo}
+                  onChange={(e) => setVsdForm({...vsdForm, importo: e.target.value})}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={vsdForm.importo_personale}
+                    onChange={(e) => setVsdForm({...vsdForm, importo_personale: e.target.checked})}
+                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  Erogato Personale (25% provvigioni)
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Note Servizio</label>
+                <textarea
+                  value={vsdForm.note}
+                  onChange={(e) => setVsdForm({...vsdForm, note: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Data *</label>
+                <input
+                  type="date"
+                  value={vsdForm.data}
+                  onChange={(e) => setVsdForm({...vsdForm, data: e.target.value})}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowVSDModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annulla
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
                 >
                   Salva
                 </button>
