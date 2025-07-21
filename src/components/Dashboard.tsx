@@ -264,6 +264,7 @@ export default function Dashboard() {
   const monthlyGI = getMonthlyTotal(giTransactions)
   const yearlyGI = getYearlyTotal(giTransactions)
   const monthlyVSD = getMonthlyTotal(vsdTransactions)
+  const yearlyVSD = getYearlyTotal(vsdTransactions)
   const monthlyVSDPersonal = getMonthlyTotal(vsdTransactions, 'importo_personale')
 
   // Calculate commissions
@@ -431,6 +432,165 @@ export default function Dashboard() {
                         <td className="p-3">€{transaction.importo.toFixed(2)}</td>
                         <td className="p-3">{transaction.note || '-'}</td>
                         <td className="p-3">{new Date(transaction.data).toLocaleDateString('it-IT')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'gi' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Incassi Mese Corrente</h3>
+                <p className="text-3xl font-bold">€{monthlyGI.toFixed(2)}</p>
+              </div>
+              <div className="bg-gradient-to-r from-teal-500 to-teal-600 text-white p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Incassi Totale Anno</h3>
+                <p className="text-3xl font-bold">€{yearlyGI.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">💵 G.I. - Incassi</h2>
+                <button
+                  onClick={() => setShowGIModal(true)}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                >
+                  <Plus size={18} />
+                  Aggiungi Incasso
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3">Cliente</th>
+                      <th className="text-left p-3">Importo</th>
+                      <th className="text-left p-3">Note</th>
+                      <th className="text-left p-3">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {giTransactions.map((transaction) => (
+                      <tr key={transaction.id} className="border-b hover:bg-gray-50">
+                        <td className="p-3">{transaction.client_name}</td>
+                        <td className="p-3">€{transaction.importo.toFixed(2)}</td>
+                        <td className="p-3">{transaction.note || '-'}</td>
+                        <td className="p-3">{new Date(transaction.data).toLocaleDateString('it-IT')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'vsd' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Servizi Mese Corrente</h3>
+                <p className="text-3xl font-bold">€{monthlyVSD.toFixed(2)}</p>
+              </div>
+              <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Servizi Totale Anno</h3>
+                <p className="text-3xl font-bold">€{yearlyVSD.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">🛠️ VSD - Servizi Erogati</h2>
+                <button
+                  onClick={() => setShowVSDModal(true)}
+                  className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2"
+                >
+                  <Plus size={18} />
+                  Aggiungi Servizio
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3">Cliente</th>
+                      <th className="text-left p-3">Importo</th>
+                      <th className="text-left p-3">Erogato Personale</th>
+                      <th className="text-left p-3">Note</th>
+                      <th className="text-left p-3">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vsdTransactions.map((transaction) => (
+                      <tr key={transaction.id} className="border-b hover:bg-gray-50">
+                        <td className="p-3">{transaction.client_name}</td>
+                        <td className="p-3">€{transaction.importo.toFixed(2)}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            transaction.importo_personale ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {transaction.importo_personale ? 'Sì' : 'No'}
+                          </span>
+                        </td>
+                        <td className="p-3">{transaction.note || '-'}</td>
+                        <td className="p-3">{new Date(transaction.data).toLocaleDateString('it-IT')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'nncf' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Nuovi Clienti Mese</h3>
+                <p className="text-3xl font-bold">{monthlyNNCF}</p>
+              </div>
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Nuovi Clienti Anno</h3>
+                <p className="text-3xl font-bold">{yearlyNNCF}</p>
+              </div>
+              <div className="bg-gradient-to-r from-pink-500 to-pink-600 text-white p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Totale Clienti</h3>
+                <p className="text-3xl font-bold">{clients.length}</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-semibold mb-4">📈 Report NNCF - Nuovi Clienti</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3">Nome Azienda</th>
+                      <th className="text-left p-3">Titolare</th>
+                      <th className="text-left p-3">Data Acquisizione</th>
+                      <th className="text-left p-3">Mese/Anno</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clients
+                      .sort((a, b) => new Date(b.data_acquisizione).getTime() - new Date(a.data_acquisizione).getTime())
+                      .map((client) => (
+                      <tr key={client.id} className="border-b hover:bg-gray-50">
+                        <td className="p-3 font-medium">{client.nome_azienda}</td>
+                        <td className="p-3">{client.nome_titolare}</td>
+                        <td className="p-3">{new Date(client.data_acquisizione).toLocaleDateString('it-IT')}</td>
+                        <td className="p-3">
+                          {new Date(client.data_acquisizione).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
