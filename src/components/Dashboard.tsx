@@ -48,6 +48,11 @@ export default function Dashboard() {
   const [showGIModal, setShowGIModal] = useState(false)
   const [showVSDModal, setShowVSDModal] = useState(false)
 
+  // Statistics states
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [showYearlyView, setShowYearlyView] = useState(false)
+
   // Form states
   const [clientForm, setClientForm] = useState({
     nome_azienda: '',
@@ -309,6 +314,42 @@ export default function Dashboard() {
     return date.getFullYear() === currentYear
   }).length
 
+  // Advanced Statistics Functions
+  const getStatsForMonth = (month: number, year: number) => {
+    const getMonthlyStats = (transactions: Transaction[], field: 'importo' | 'importo_personale' = 'importo') => {
+      return transactions
+        .filter(t => {
+          const date = new Date(t.data)
+          return date.getMonth() + 1 === month && date.getFullYear() === year
+        })
+        .reduce((sum, t) => sum + (field === 'importo_personale' ? (t.importo_personale || 0) : t.importo), 0)
+    }
+
+    const vss = getMonthlyStats(vssTransactions)
+    const gi = getMonthlyStats(giTransactions)
+    const vsd = getMonthlyStats(vsdTransactions)
+    const vsdPersonal = getMonthlyStats(vsdTransactions, 'importo_personale')
+    const nncf = clients.filter(c => {
+      const date = new Date(c.data_acquisizione)
+      return date.getMonth() + 1 === month && date.getFullYear() === year
+    }).length
+
+    const vssCommission = vss * 0.15
+    const vsdCommission = vsdPersonal * 0.25
+    const totalCommissions = vssCommission + vsdCommission
+
+    return { vss, gi, vsd, vsdPersonal, nncf, vssCommission, vsdCommission, totalCommissions }
+  }
+
+  const getYearlyStats = (year: number) => {
+    const months = Array.from({ length: 12 }, (_, i) => i + 1)
+    return months.map(month => ({
+      month,
+      monthName: new Date(year, month - 1).toLocaleDateString('it-IT', { month: 'long' }),
+      ...getStatsForMonth(month, year)
+    }))
+  }
+
   const tabs = [
     { id: 'clienti', label: 'Clienti', icon: Users },
     { id: 'vss', label: 'VSS', icon: Euro },
@@ -316,6 +357,7 @@ export default function Dashboard() {
     { id: 'vsd', label: 'VSD', icon: Settings },
     { id: 'nncf', label: 'Report NNCF', icon: BarChart3 },
     { id: 'provvigioni', label: 'Provvigioni', icon: Percent },
+    { id: 'statistiche', label: 'Statistiche', icon: BarChart3 },
   ]
 
   if (loading) {
@@ -657,6 +699,214 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'statistiche' && (
+          <div className="space-y-6">
+            {/* Controls */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex flex-wrap items-center gap-4 mb-6">
+                <h2 className="text-xl font-semibold">📊 Statistiche Avanzate</h2>
+                <div className="flex flex-wrap items-center gap-4 ml-auto">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium">Mese:</label>
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      disabled={showYearlyView}
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                        <option key={month} value={month}>
+                          {new Date(2024, month - 1).toLocaleDateString('it-IT', { month: 'long' })}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium">Anno:</label>
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => setShowYearlyView(!showYearlyView)}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      showYearlyView
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {showYearlyView ? 'Vista Mensile' : 'Panoramica Annuale'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {!showYearlyView ? (
+              /* Monthly View */
+              <div className="space-y-6">
+                {(() => {
+                  const stats = getStatsForMonth(selectedMonth, selectedYear)
+                  const monthName = new Date(selectedYear, selectedMonth - 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+                  
+                  return (
+                    <>
+                      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg">
+                        <h3 className="text-2xl font-bold mb-2">📅 {monthName}</h3>
+                        <p className="text-lg opacity-90">Statistiche dettagliate del mese selezionato</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg">
+                          <h4 className="text-lg font-semibold mb-2">💰 VSS Venduto</h4>
+                          <p className="text-3xl font-bold">€{stats.vss.toFixed(2)}</p>
+                          <p className="text-sm opacity-90 mt-1">Provvigioni: €{stats.vssCommission.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg">
+                          <h4 className="text-lg font-semibold mb-2">💵 G.I. Incassi</h4>
+                          <p className="text-3xl font-bold">€{stats.gi.toFixed(2)}</p>
+                          <p className="text-sm opacity-90 mt-1">Incassi effettivi</p>
+                        </div>
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-lg">
+                          <h4 className="text-lg font-semibold mb-2">🛠️ VSD Servizi</h4>
+                          <p className="text-3xl font-bold">€{stats.vsd.toFixed(2)}</p>
+                          <p className="text-sm opacity-90 mt-1">Personale: €{stats.vsdPersonal.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-lg">
+                          <h4 className="text-lg font-semibold mb-2">💼 Provvigioni</h4>
+                          <p className="text-3xl font-bold">€{stats.totalCommissions.toFixed(2)}</p>
+                          <p className="text-sm opacity-90 mt-1">VSD: €{stats.vsdCommission.toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-lg shadow-sm p-6">
+                        <h3 className="text-lg font-semibold mb-4">📈 Dettaglio Mensile</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <h4 className="font-medium mb-3">💰 Vendite e Incassi</h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between p-3 bg-green-50 rounded-lg">
+                                <span>VSS Venduto</span>
+                                <span className="font-semibold">€{stats.vss.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between p-3 bg-blue-50 rounded-lg">
+                                <span>G.I. Incassi</span>
+                                <span className="font-semibold">€{stats.gi.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between p-3 bg-orange-50 rounded-lg">
+                                <span>VSD Servizi</span>
+                                <span className="font-semibold">€{stats.vsd.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="font-medium mb-3">💼 Provvigioni e Clienti</h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between p-3 bg-purple-50 rounded-lg">
+                                <span>Provvigioni VSS (15%)</span>
+                                <span className="font-semibold">€{stats.vssCommission.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between p-3 bg-purple-50 rounded-lg">
+                                <span>Provvigioni VSD (25%)</span>
+                                <span className="font-semibold">€{stats.vsdCommission.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between p-3 bg-indigo-50 rounded-lg">
+                                <span>Nuovi Clienti (NNCF)</span>
+                                <span className="font-semibold">{stats.nncf}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            ) : (
+              /* Yearly View */
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-lg">
+                  <h3 className="text-2xl font-bold mb-2">📊 Panoramica Annuale {selectedYear}</h3>
+                  <p className="text-lg opacity-90">Statistiche complete per tutti i 12 mesi</p>
+                </div>
+
+                {(() => {
+                  const yearlyStats = getYearlyStats(selectedYear)
+                  const totals = yearlyStats.reduce((acc, month) => ({
+                    vss: acc.vss + month.vss,
+                    gi: acc.gi + month.gi,
+                    vsd: acc.vsd + month.vsd,
+                    totalCommissions: acc.totalCommissions + month.totalCommissions,
+                    nncf: acc.nncf + month.nncf
+                  }), { vss: 0, gi: 0, vsd: 0, totalCommissions: 0, nncf: 0 })
+
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg">
+                          <h4 className="text-lg font-semibold mb-2">💰 VSS Totale</h4>
+                          <p className="text-3xl font-bold">€{totals.vss.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg">
+                          <h4 className="text-lg font-semibold mb-2">💵 G.I. Totale</h4>
+                          <p className="text-3xl font-bold">€{totals.gi.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-lg">
+                          <h4 className="text-lg font-semibold mb-2">🛠️ VSD Totale</h4>
+                          <p className="text-3xl font-bold">€{totals.vsd.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-lg">
+                          <h4 className="text-lg font-semibold mb-2">💼 Provvigioni</h4>
+                          <p className="text-3xl font-bold">€{totals.totalCommissions.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-lg">
+                          <h4 className="text-lg font-semibold mb-2">👥 NNCF Totale</h4>
+                          <p className="text-3xl font-bold">{totals.nncf}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-lg shadow-sm p-6">
+                        <h3 className="text-lg font-semibold mb-4">📅 Dettaglio Mensile {selectedYear}</h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left p-3">Mese</th>
+                                <th className="text-left p-3">VSS</th>
+                                <th className="text-left p-3">G.I.</th>
+                                <th className="text-left p-3">VSD</th>
+                                <th className="text-left p-3">Provvigioni</th>
+                                <th className="text-left p-3">NNCF</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {yearlyStats.map((monthData) => (
+                                <tr key={monthData.month} className="border-b hover:bg-gray-50">
+                                  <td className="p-3 font-medium">{monthData.monthName}</td>
+                                  <td className="p-3">€{monthData.vss.toFixed(2)}</td>
+                                  <td className="p-3">€{monthData.gi.toFixed(2)}</td>
+                                  <td className="p-3">€{monthData.vsd.toFixed(2)}</td>
+                                  <td className="p-3 font-semibold text-purple-600">€{monthData.totalCommissions.toFixed(2)}</td>
+                                  <td className="p-3">{monthData.nncf}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            )}
           </div>
         )}
       </div>
