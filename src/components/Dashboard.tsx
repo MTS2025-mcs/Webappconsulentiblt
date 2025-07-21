@@ -47,6 +47,12 @@ export default function Dashboard() {
   const [showVSSModal, setShowVSSModal] = useState(false)
   const [showGIModal, setShowGIModal] = useState(false)
   const [showVSDModal, setShowVSDModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  // Edit/Delete states
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [editingType, setEditingType] = useState<'vss' | 'gi' | 'vsd' | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string, type: 'vss' | 'gi' | 'vsd', description: string } | null>(null)
 
   // Statistics states
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
@@ -167,19 +173,37 @@ export default function Dashboard() {
   const addVSSTransaction = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const { error } = await supabase
-        .from('vss_transactions')
-        .insert([{
-          user_id: user?.id,
-          client_id: transactionForm.client_id,
-          importo: parseFloat(transactionForm.importo),
-          note: transactionForm.note,
-          data: transactionForm.data
-        }])
+      if (editingTransaction && editingType === 'vss') {
+        // Update existing transaction
+        const { error } = await supabase
+          .from('vss_transactions')
+          .update({
+            client_id: transactionForm.client_id,
+            importo: parseFloat(transactionForm.importo),
+            note: transactionForm.note,
+            data: transactionForm.data
+          })
+          .eq('id', editingTransaction.id)
 
-      if (error) throw error
+        if (error) throw error
+      } else {
+        // Insert new transaction
+        const { error } = await supabase
+          .from('vss_transactions')
+          .insert([{
+            user_id: user?.id,
+            client_id: transactionForm.client_id,
+            importo: parseFloat(transactionForm.importo),
+            note: transactionForm.note,
+            data: transactionForm.data
+          }])
+
+        if (error) throw error
+      }
 
       setShowVSSModal(false)
+      setEditingTransaction(null)
+      setEditingType(null)
       resetTransactionForm()
       loadData()
     } catch (error) {
@@ -190,19 +214,37 @@ export default function Dashboard() {
   const addGITransaction = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const { error } = await supabase
-        .from('gi_transactions')
-        .insert([{
-          user_id: user?.id,
-          client_id: giForm.client_id,
-          importo: parseFloat(giForm.importo),
-          note: giForm.note,
-          data: giForm.data
-        }])
+      if (editingTransaction && editingType === 'gi') {
+        // Update existing transaction
+        const { error } = await supabase
+          .from('gi_transactions')
+          .update({
+            client_id: giForm.client_id,
+            importo: parseFloat(giForm.importo),
+            note: giForm.note,
+            data: giForm.data
+          })
+          .eq('id', editingTransaction.id)
 
-      if (error) throw error
+        if (error) throw error
+      } else {
+        // Insert new transaction
+        const { error } = await supabase
+          .from('gi_transactions')
+          .insert([{
+            user_id: user?.id,
+            client_id: giForm.client_id,
+            importo: parseFloat(giForm.importo),
+            note: giForm.note,
+            data: giForm.data
+          }])
+
+        if (error) throw error
+      }
 
       setShowGIModal(false)
+      setEditingTransaction(null)
+      setEditingType(null)
       setGiForm({
         client_id: '',
         importo: '',
@@ -219,20 +261,39 @@ export default function Dashboard() {
   const addVSDTransaction = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const { error } = await supabase
-        .from('vsd_transactions')
-        .insert([{
-          user_id: user?.id,
-          client_id: vsdForm.client_id,
-          importo: parseFloat(vsdForm.importo),
-          importo_personale: vsdForm.importo_personale ? parseFloat(vsdForm.importo) : 0,
-          note: vsdForm.note,
-          data: vsdForm.data
-        }])
+      if (editingTransaction && editingType === 'vsd') {
+        // Update existing transaction
+        const { error } = await supabase
+          .from('vsd_transactions')
+          .update({
+            client_id: vsdForm.client_id,
+            importo: parseFloat(vsdForm.importo),
+            importo_personale: vsdForm.importo_personale ? parseFloat(vsdForm.importo) : 0,
+            note: vsdForm.note,
+            data: vsdForm.data
+          })
+          .eq('id', editingTransaction.id)
 
-      if (error) throw error
+        if (error) throw error
+      } else {
+        // Insert new transaction
+        const { error } = await supabase
+          .from('vsd_transactions')
+          .insert([{
+            user_id: user?.id,
+            client_id: vsdForm.client_id,
+            importo: parseFloat(vsdForm.importo),
+            importo_personale: vsdForm.importo_personale ? parseFloat(vsdForm.importo) : 0,
+            note: vsdForm.note,
+            data: vsdForm.data
+          }])
+
+        if (error) throw error
+      }
 
       setShowVSDModal(false)
+      setEditingTransaction(null)
+      setEditingType(null)
       setVsdForm({
         client_id: '',
         importo: '',
@@ -269,6 +330,67 @@ export default function Dashboard() {
       } catch (error) {
         console.error('Error deleting client:', error)
       }
+    }
+  }
+
+  // Edit/Delete Transaction Functions
+  const startEditTransaction = (transaction: Transaction, type: 'vss' | 'gi' | 'vsd') => {
+    setEditingTransaction(transaction)
+    setEditingType(type)
+    
+    if (type === 'vss') {
+      setTransactionForm({
+        client_id: transaction.client_id,
+        importo: transaction.importo.toString(),
+        importo_personale: '',
+        note: transaction.note || '',
+        data: transaction.data
+      })
+      setShowVSSModal(true)
+    } else if (type === 'gi') {
+      setGiForm({
+        client_id: transaction.client_id,
+        importo: transaction.importo.toString(),
+        note: transaction.note || '',
+        data: transaction.data
+      })
+      setShowGIModal(true)
+    } else if (type === 'vsd') {
+      setVsdForm({
+        client_id: transaction.client_id,
+        importo: transaction.importo.toString(),
+        importo_personale: (transaction.importo_personale || 0) > 0,
+        note: transaction.note || '',
+        data: transaction.data
+      })
+      setShowVSDModal(true)
+    }
+  }
+
+  const confirmDeleteTransaction = (id: string, type: 'vss' | 'gi' | 'vsd', description: string) => {
+    setDeleteTarget({ id, type, description })
+    setShowDeleteModal(true)
+  }
+
+  const deleteTransaction = async () => {
+    if (!deleteTarget) return
+    
+    try {
+      const tableName = deleteTarget.type === 'vss' ? 'vss_transactions' : 
+                       deleteTarget.type === 'gi' ? 'gi_transactions' : 'vsd_transactions'
+      
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', deleteTarget.id)
+
+      if (error) throw error
+      
+      setShowDeleteModal(false)
+      setDeleteTarget(null)
+      loadData()
+    } catch (error) {
+      console.error('Error deleting transaction:', error)
     }
   }
 
@@ -492,6 +614,7 @@ export default function Dashboard() {
                       <th className="text-left p-3">Importo</th>
                       <th className="text-left p-3">Note</th>
                       <th className="text-left p-3">Data</th>
+                      <th className="text-left p-3">Azioni</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -501,6 +624,24 @@ export default function Dashboard() {
                         <td className="p-3">€{transaction.importo.toFixed(2)}</td>
                         <td className="p-3">{transaction.note || '-'}</td>
                         <td className="p-3">{new Date(transaction.data).toLocaleDateString('it-IT')}</td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => startEditTransaction(transaction, 'vss')}
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                              title="Modifica"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => confirmDeleteTransaction(transaction.id, 'vss', `VSS di €${transaction.importo.toFixed(2)} per ${transaction.client_name}`)}
+                              className="text-red-600 hover:text-red-800 p-1"
+                              title="Elimina"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -543,6 +684,7 @@ export default function Dashboard() {
                       <th className="text-left p-3">Importo</th>
                       <th className="text-left p-3">Note</th>
                       <th className="text-left p-3">Data</th>
+                      <th className="text-left p-3">Azioni</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -552,6 +694,24 @@ export default function Dashboard() {
                         <td className="p-3">€{transaction.importo.toFixed(2)}</td>
                         <td className="p-3">{transaction.note || '-'}</td>
                         <td className="p-3">{new Date(transaction.data).toLocaleDateString('it-IT')}</td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => startEditTransaction(transaction, 'gi')}
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                              title="Modifica"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => confirmDeleteTransaction(transaction.id, 'gi', `Incasso di €${transaction.importo.toFixed(2)} per ${transaction.client_name}`)}
+                              className="text-red-600 hover:text-red-800 p-1"
+                              title="Elimina"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -595,6 +755,7 @@ export default function Dashboard() {
                       <th className="text-left p-3">Erogato Personale</th>
                       <th className="text-left p-3">Note</th>
                       <th className="text-left p-3">Data</th>
+                      <th className="text-left p-3">Azioni</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -611,6 +772,24 @@ export default function Dashboard() {
                         </td>
                         <td className="p-3">{transaction.note || '-'}</td>
                         <td className="p-3">{new Date(transaction.data).toLocaleDateString('it-IT')}</td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => startEditTransaction(transaction, 'vsd')}
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                              title="Modifica"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => confirmDeleteTransaction(transaction.id, 'vsd', `Servizio di €${transaction.importo.toFixed(2)} per ${transaction.client_name}`)}
+                              className="text-red-600 hover:text-red-800 p-1"
+                              title="Elimina"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1204,6 +1383,51 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && deleteTarget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <span className="text-2xl">⚠️</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Conferma Cancellazione</h3>
+                <p className="text-sm text-gray-600">Questa azione non può essere annullata</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700">
+                Sei sicuro di voler eliminare questo record?
+              </p>
+              <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium text-gray-900">{deleteTarget.description}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setDeleteTarget(null)
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={deleteTransaction}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Elimina
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
